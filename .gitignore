@@ -1,0 +1,5 @@
+*.class
+*.db
+*.idx
+backup_*
+.vscode/
