@@ -166,22 +166,63 @@ public class DatabaseManager {
     }
 
 
-    public void importFromCSV(String filePath) throws IOException {
-        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                String[] parts = line.split(";");
-                if (parts.length == 5) {
+public void importFromCSV(String filePath) throws IOException {
+    // Явно указываем кодировку UTF-8, чтобы русские буквы читались нормально
+    try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(filePath), "UTF-8"))) {
+        String line;
+        boolean isFirstLine = true;
+
+        while ((line = br.readLine()) != null) {
+            // 1. Убираем невидимый BOM-символ, который добавляет Excel в начало файла
+            if (line.startsWith("\uFEFF")) {
+                line = line.substring(1);
+            }
+
+            // 2. Пропускаем заголовок (первую строку)
+            if (isFirstLine) {
+                isFirstLine = false;
+                // Если в строке есть буквы (а не только цифры), значит это заголовок — пропускаем
+                if (line.toLowerCase().contains("id") || line.toLowerCase().contains("номер") || line.toLowerCase().contains("цена")) {
+                    continue; 
+                }
+            }
+
+            if (line.trim().isEmpty()) continue; // Пропускаем пустые строки
+
+            // 3. АВТООПРЕДЕЛЕНИЕ РАЗДЕЛИТЕЛЯ (запятая или точка с запятой)
+            String delimiter = line.contains(";") ? ";" : ",";
+            
+            String[] parts = line.split(delimiter);
+            
+            // 4. Очистка от кавычек и лишних пробелов (Excel любит их ставить)
+            for (int i = 0; i < parts.length; i++) {
+                parts[i] = parts[i].replace("\"", "").trim();
+            }
+
+            if (parts.length >= 5) {
+                try {
+                    // 5. Обработка цены: меняем запятую на точку (1500,50 -> 1500.50)
+                    String priceStr = parts[4].replace(",", ".");
+                    
                     Train t = new Train(
                         Integer.parseInt(parts[0]),
                         parts[1],
                         parts[2],
                         parts[3],
-                        Double.parseDouble(parts[4])
+                        Double.parseDouble(priceStr)
                     );
-                    addTrain(t);
+                    
+                    // Если ID существует — обновляем, если нет — добавляем
+                    if (index.containsKey(t.getId())) {
+                        editTrain(t); 
+                    } else {
+                        addTrain(t);  
+                    }
+                } catch (Exception e) {
+                    System.out.println("Пропущена строка (ошибка формата): " + line);
                 }
             }
         }
     }
+}
 }
