@@ -24,10 +24,36 @@ public class MainGUI extends JFrame {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
-        // Таблица
+     
         String[] columns = {"ID", "Номер поезда", "Направление", "Время", "Цена"};
         tableModel = new DefaultTableModel(columns, 0);
         table = new JTable(tableModel);
+
+        tableModel.addTableModelListener(e -> {
+           
+            if (e.getType() == javax.swing.event.TableModelEvent.UPDATE) {
+                int row = e.getFirstRow();
+                try {
+ 
+                    int id = Integer.parseInt(tableModel.getValueAt(row, 0).toString());
+                    String num = tableModel.getValueAt(row, 1).toString();
+                    String dest = tableModel.getValueAt(row, 2).toString();
+                    String time = tableModel.getValueAt(row, 3).toString();
+                   
+                    double price = Double.parseDouble(tableModel.getValueAt(row, 4).toString().replace(",", "."));
+
+                    db.editTrain(new Train(id, num, dest, time, price));
+                    
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(this, "Ошибка! Цена должна быть числом (например, 250.50)", "Ошибка ввода", JOptionPane.ERROR_MESSAGE);
+                    
+                    refreshTable(); 
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        });
+
         add(new JScrollPane(table), BorderLayout.CENTER);
 
         // Панель кнопок
@@ -47,14 +73,14 @@ public class MainGUI extends JFrame {
         panel.add(btnSearch); panel.add(btnBackup); panel.add(btnRestore); panel.add(btnImport);
         add(panel, BorderLayout.SOUTH);
 
-        // Слушатели событий
+        
         btnRefresh.addActionListener(e -> refreshTable());
         
         btnAdd.addActionListener(e -> {
             try {
                 int id = Integer.parseInt(JOptionPane.showInputDialog("Введите ID (число):"));
                 String num = JOptionPane.showInputDialog("Номер поезда:");
-                String dest = JOptionPane.showInputDialog("Станция назначения:");
+                String dest = JOptionPane.showInputDialog("Станция отправления - станция прибытия:");
                 String time = JOptionPane.showInputDialog("Время (ЧЧ:ММ):");
                 double price = Double.parseDouble(JOptionPane.showInputDialog("Цена:"));
                 

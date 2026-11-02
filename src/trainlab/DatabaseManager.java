@@ -6,10 +6,14 @@ import java.util.*;
 public class DatabaseManager {
     private static final String DB_FILE = "trains.db";
     private static final String IDX_FILE = "trains.idx";
-    
+
+    private static final int LEN_NUMBER = 10;  // Номер поезда
+    private static final int LEN_DEST = 60;    // Направление (вы увеличили до 60)
+    private static final int LEN_TIME = 5;     // Время
+
     // Размер одной записи в байтах: 
-    // 4 (int) + 20 (10 chars * 2) + 60 (30 chars * 2) + 10 (5 chars * 2) + 8 (double) = 102 байта
-    public static final int RECORD_SIZE = 102; 
+    // 4 (int) + (10*2) + (60*2) + (5*2) + 8 (double) = 4 + 20 + 120 + 10 + 8 = 162 байта
+    public static final int RECORD_SIZE = 4 + (LEN_NUMBER * 2) + (LEN_DEST * 2) + (LEN_TIME * 2) + 8; 
 
     // Индекс: ID -> смещение в файле (offset)
     private Map<Integer, Long> index = new HashMap<>();
@@ -21,7 +25,7 @@ public class DatabaseManager {
         loadIndex();
     }
 
-    // --- Загрузка и сохранение индекса ---
+
     private void loadIndex() {
         File idxFile = new File(IDX_FILE);
         if (idxFile.exists()) {
@@ -41,10 +45,10 @@ public class DatabaseManager {
         }
     }
 
-    // --- Вспомогательные методы для фиксированных строк ---
+
     private void writeFixedString(String s, int length, RandomAccessFile raf) throws IOException {
         StringBuilder sb = new StringBuilder(s);
-        sb.setLength(length); // Обрезает или дополняет нулевыми символами
+        sb.setLength(length); 
         raf.writeChars(sb.toString());
     }
 
@@ -56,7 +60,6 @@ public class DatabaseManager {
         return new String(chars).replace("\0", "").trim();
     }
 
-    // --- CRUD Операции ---
 
     public boolean addTrain(Train t) throws IOException {
         if (index.containsKey(t.getId())) return false; // Проверка уникальности
@@ -65,9 +68,9 @@ public class DatabaseManager {
         raf.seek(offset);
         
         raf.writeInt(t.getId());
-        writeFixedString(t.getTrainNumber(), 10, raf);
-        writeFixedString(t.getDestination(), 30, raf);
-        writeFixedString(t.getDepartureTime(), 5, raf);
+        writeFixedString(t.getTrainNumber(), LEN_NUMBER, raf);
+        writeFixedString(t.getDestination(), LEN_DEST, raf);
+        writeFixedString(t.getDepartureTime(), LEN_TIME, raf);
         raf.writeDouble(t.getPrice());
 
         index.put(t.getId(), offset);
@@ -83,7 +86,14 @@ public class DatabaseManager {
         int readId = raf.readInt();
         if (readId == -1) return null; // Удалено
         
-        return new Train(readId, readFixedString(10, raf), readFixedString(30, raf), readFixedString(5, raf), raf.readDouble());
+
+        return new Train(
+            readId, 
+            readFixedString(LEN_NUMBER, raf), 
+            readFixedString(LEN_DEST, raf), 
+            readFixedString(LEN_TIME, raf), 
+            raf.readDouble()
+        );
     }
 
     public boolean deleteById(int id) throws IOException {
@@ -102,9 +112,9 @@ public class DatabaseManager {
             raf.seek(offset);
             int id = raf.readInt();
             if (id != -1) {
-                String num = readFixedString(10, raf);
-                String d = readFixedString(30, raf);
-                String time = readFixedString(5, raf);
+                String num = readFixedString(LEN_NUMBER, raf);
+                String d = readFixedString(LEN_DEST, raf);
+                String time = readFixedString(LEN_TIME, raf);
                 double price = raf.readDouble();
                 if (d.toLowerCase().contains(dest.toLowerCase())) {
                     result.add(new Train(id, num, d, time, price));
@@ -120,9 +130,9 @@ public class DatabaseManager {
         raf.seek(offset);
         
         raf.writeInt(t.getId());
-        writeFixedString(t.getTrainNumber(), 10, raf);
-        writeFixedString(t.getDestination(), 30, raf);
-        writeFixedString(t.getDepartureTime(), 5, raf);
+        writeFixedString(t.getTrainNumber(), LEN_NUMBER, raf);
+        writeFixedString(t.getDestination(), LEN_DEST, raf);
+        writeFixedString(t.getDepartureTime(), LEN_TIME, raf);
         raf.writeDouble(t.getPrice());
         return true;
     }
@@ -142,7 +152,6 @@ public class DatabaseManager {
         saveIndex();
     }
 
-    // --- Бэкап и Импорт ---
     public void backup(String path) throws IOException {
         java.nio.file.Files.copy(new File(DB_FILE).toPath(), new File(path).toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         java.nio.file.Files.copy(new File(IDX_FILE).toPath(), new File(path + ".idx").toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
@@ -156,7 +165,7 @@ public class DatabaseManager {
         loadIndex();
     }
 
-    // Импорт из CSV (id;number;dest;time;price)
+
     public void importFromCSV(String filePath) throws IOException {
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
