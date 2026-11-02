@@ -68,9 +68,11 @@ public class MainGUI extends JFrame {
         JButton btnBackup = new JButton("Бэкап");
         JButton btnRestore = new JButton("Восстановить");
         JButton btnImport = new JButton("Импорт CSV");
+        JButton btnSearchById = new JButton("Поиск по ID"); 
 
         panel.add(btnRefresh); panel.add(btnAdd); panel.add(btnEdit); panel.add(btnDelete); panel.add(btnClear);
         panel.add(btnSearch); panel.add(btnBackup); panel.add(btnRestore); panel.add(btnImport);
+        panel.add(btnSearchById); 
         add(panel, BorderLayout.SOUTH);
 
         
@@ -171,9 +173,45 @@ public class MainGUI extends JFrame {
             }
         });
 
+
+        btnSearchById.addActionListener(e -> {
+    try {
+        
+        String input = JOptionPane.showInputDialog("Введите ID поезда для поиска:");
+        if (input == null || input.isEmpty()) return; 
+        
+        int id = Integer.parseInt(input);
+        
+        
+        Train t = db.getTrainById(id);
+        
+        
+        tableModel.setRowCount(0);
+        
+        
+        if (t != null) {
+            tableModel.addRow(new Object[]{
+                t.getId(), 
+                t.getTrainNumber(), 
+                t.getDestination(), 
+                t.getDepartureTime(), 
+                t.getPrice()
+            });
+        } else {
+            JOptionPane.showMessageDialog(this, "Поезд с ID " + id + " не найден или удален.");
+        }
+    } catch (NumberFormatException ex) {
+        JOptionPane.showMessageDialog(this, "Ошибка: ID должен быть числом!", "Ошибка ввода", JOptionPane.ERROR_MESSAGE);
+    } catch (IOException ex) {
+        JOptionPane.showMessageDialog(this, "Ошибка чтения из базы данных.");
+    }
+});
+
         refreshTable();
         setVisible(true);
     }
+
+    
 
     private void refreshTable() {
         try {

@@ -8,7 +8,7 @@ public class DatabaseManager {
     private static final String IDX_FILE = "trains.idx";
 
     private static final int LEN_NUMBER = 10;  // Номер поезда
-    private static final int LEN_DEST = 60;    // Направление (вы увеличили до 60)
+    private static final int LEN_DEST = 60;    // Направление 
     private static final int LEN_TIME = 5;     // Время
 
     // Размер одной записи в байтах: 
@@ -107,6 +107,7 @@ public class DatabaseManager {
     }
 
     public List<Train> searchByDestination(String dest) throws IOException {
+        //
         List<Train> result = new ArrayList<>();
         for (long offset : index.values()) {
             raf.seek(offset);
@@ -116,6 +117,8 @@ public class DatabaseManager {
                 String d = readFixedString(LEN_DEST, raf);
                 String time = readFixedString(LEN_TIME, raf);
                 double price = raf.readDouble();
+                // if (d.toLowerCase().contains(dest.toLowerCase())) {
+                //     count++;
                 if (d.toLowerCase().contains(dest.toLowerCase())) {
                     result.add(new Train(id, num, d, time, price));
                 }
